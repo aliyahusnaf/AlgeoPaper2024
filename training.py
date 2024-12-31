@@ -2,35 +2,34 @@ import numpy as np
 from PIL import Image
 import os
 import csv
-import primitifmatriks
+import matrixoperations
 
-# Konfigurasi
-TARGET_SIZE = (16, 16)  # Ukuran gambar setelah resize
-DATASET_PATH = "/Users/aliyahusnafayyaza/Documents/MakalahAlgeo/train_data"  # Ganti dengan path folder dataset
-OUTPUT_FILE = "library.csv"  # File output hasil ekstraksi
 
-# Fungsi grayscaling
+TARGET_SIZE = (16, 16) 
+DATASET_PATH = "/Users/aliyahusnafayyaza/Documents/MakalahAlgeo/train_data" 
+OUTPUT_FILE = "library.csv"  
+
 def grayscaling(image):
     image_array = np.array(image)
-    if len(image_array.shape) == 3:  # RGB ke grayscale
+    if len(image_array.shape) == 3:  # RGB to grayscale
         R, G, B = image_array[:, :, 0], image_array[:, :, 1], image_array[:, :, 2]
         grayscale = 0.2989 * R + 0.5870 * G + 0.1140 * B
-    else:  # Sudah grayscale
+    else:  # Grayscaled already
         grayscale = image_array
     return grayscale
 
 def extract_minutiae(image):
     skeleton = (image > 100).astype(np.uint8)  
     minutiae_points = []
-
     rows, cols = skeleton.shape
     for i in range(1, rows - 1):
         for j in range(1, cols - 1):
-            if skeleton[i, j] == 1:  
+            if skeleton[i, j] == 1: 
                 neighbors = [
                     skeleton[i-1, j], skeleton[i-1, j+1], skeleton[i, j+1], skeleton[i+1, j+1],
                     skeleton[i+1, j], skeleton[i+1, j-1], skeleton[i, j-1], skeleton[i-1, j-1]
                 ]
+                neighbors = np.array(neighbors, dtype=np.int32)
                 cn = sum((neighbors[k] - neighbors[k-1]) == 1 for k in range(8)) + (neighbors[0] - neighbors[-1] == 1)
                 if cn == 1 or cn == 3: 
                     minutiae_points.append((i, j))
@@ -66,13 +65,14 @@ def svd_matching(data):
 
     covariance = np.dot(standardized_data.T, standardized_data) / len(data)
 
-    eigenvectors = primitifmatriks.svd(covariance) 
+    eigenvectors = matrixoperations.svd(covariance) 
     eigenvectors /= np.linalg.norm(eigenvectors, axis=0)
     
     projections = np.dot(standardized_data, eigenvectors)
     return mean_vector, eigenvectors, projections
 
-def save_to_csv(mean_vector, eigenvectors, projections, image_names, output_file=OUTPUT_FILE):
+def save_to_csv(mean_vector, eigenvectors, projections, image_names, 
+                output_file=OUTPUT_FILE):
     with open(output_file, mode="w", newline="") as file:
         writer = csv.writer(file)
 
